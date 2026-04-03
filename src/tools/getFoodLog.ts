@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import type { LoseItClient } from "../loseit/client.js";
-import { dateToDayNumber, GwtParseError } from "../loseit/gwt.js";
+import { dateToDayNumber, localTodayAsUTCDate, GwtParseError } from "../loseit/gwt.js";
 import { extractFoodLog } from "../loseit/extractors.js";
 import { READ_ONLY_TOOL_ANNOTATIONS } from "./common.js";
 import { errorResponse, textResponse } from "./response.js";
@@ -36,7 +36,7 @@ export function registerGetFoodLogTool(
 
         const targetDate = args.date
           ? new Date(args.date)
-          : new Date();
+          : localTodayAsUTCDate();
         const targetDayNumber = dateToDayNumber(targetDate);
 
         const result = extractFoodLog(raw, targetDayNumber);

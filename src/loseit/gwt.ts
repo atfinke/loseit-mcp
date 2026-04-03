@@ -262,15 +262,31 @@ export class GwtReader {
 
 // --- Day Number Utilities ---
 
+/**
+ * Convert a Date to a Lose It day number.
+ * The Date's **UTC** components are used, so callers must ensure the
+ * year/month/day they care about are in UTC.  For ISO-string inputs
+ * (`new Date("2026-04-02")`) this is automatic.  For "today in local
+ * time" use {@link localTodayAsUTCDate}.
+ */
 export function dateToDayNumber(date: Date): number {
   const msPerDay = 86_400_000;
   const utcDate = Date.UTC(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
   );
   const utcEpoch = Date.UTC(2000, 11, 31);
   return Math.round((utcDate - utcEpoch) / msPerDay);
+}
+
+/**
+ * Return a Date whose UTC year/month/day equal the current local date.
+ * This lets `dateToDayNumber` compute the correct day number for "today".
+ */
+export function localTodayAsUTCDate(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 }
 
 export function dayNumberToDate(dayNumber: number): Date {
