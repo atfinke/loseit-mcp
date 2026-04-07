@@ -571,7 +571,7 @@ export function extractFoodLog(
 
   for (const food of foodEntryPositions) {
     const isTargetDay = targetDayPositions.some(
-      (p) => p > food.pos && p < food.pos + 80,
+      (p) => Math.abs(p - food.pos) < 80,
     );
     if (!isTargetDay) continue;
 
