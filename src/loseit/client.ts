@@ -35,6 +35,28 @@ export class LoseItNetworkError extends Error {
   }
 }
 
+/**
+ * True only when the server explicitly rejected our credentials. Everything
+ * else — transport failures, rate limits, server errors, malformed bodies —
+ * leaves the question of session validity unanswered, so callers must not
+ * treat it as a reason to re-authenticate.
+ */
+export function isSessionRejected(error: unknown): boolean {
+  return (
+    error instanceof LoseItApiError &&
+    (error.status === 401 || error.status === 403)
+  );
+}
+
+/** Short human-readable reason, for logging why a session check was skipped. */
+export function describeFailure(error: unknown): string {
+  if (error instanceof LoseItApiError) return `HTTP ${error.status}`;
+  if (error instanceof LoseItNetworkError) return "network error";
+  if (error instanceof GwtParseError) return "unparseable response";
+  if (error instanceof Error) return error.name;
+  return "unknown error";
+}
+
 interface SessionCache {
   cookies: Record<string, string>;
   userId: number;
@@ -63,8 +85,21 @@ export class LoseItClient {
           `Loaded cached session for ${this.username} (user ${this.userId})`,
         );
         return;
-      } catch {
-        console.error("Cached session expired, re-authenticating...");
+      } catch (error) {
+        // Only an auth rejection proves the cookies are dead. A network blip,
+        // a Cloudflare challenge, 429, 5xx or an unparseable body says nothing
+        // about them — and re-authenticating on those escalates a recoverable
+        // hiccup into a login, which Lose It rate-limits, which fails startup
+        // entirely. gwtRpc already retries 401 through login() internally, so
+        // reaching here after a real auth failure means that path was tried.
+        if (!isSessionRejected(error)) {
+          console.error(
+            `Session check could not complete (${describeFailure(error)}); ` +
+              `keeping cached session for ${this.username}.`,
+          );
+          return;
+        }
+        console.error("Cached session rejected, re-authenticating...");
       }
     }
 
